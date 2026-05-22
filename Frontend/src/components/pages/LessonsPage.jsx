@@ -778,7 +778,7 @@ const LessonsPage = () => {
         </p>
         <p className="text-gray-400 text-sm">
           Make sure your backend is running on{" "}
-          <code>http://localhost:5000</code>
+          <code>https://pp-deploy.onrender.com</code>
         </p>
         <button
           onClick={() => {

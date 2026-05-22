@@ -25,7 +25,7 @@ You help students with:
 
 Keep responses concise, friendly, and helpful. Use emojis sparingly. If a question is outside your scope, guide the student to the appropriate resource.`;
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://pp-deploy.onrender.com";
 
 const AIChat = () => {
   const [isOpen, setIsOpen] = useState(false);
