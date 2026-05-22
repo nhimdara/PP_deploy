@@ -25,7 +25,7 @@ import VideoModal from "./video/VideoModal";
 import VideoPlaylistModal from "./video/VideoPlaylistModal";
 
 // ─── API ────────────────────────────────────────────────────
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "https://pp-deploy.onrender.com/api";
 
 async function fetchLessons() {
   const [lessonsRes, videosRes] = await Promise.all([

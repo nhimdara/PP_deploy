@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import logo from "./../assets/image/logo.png";
 
-const API = "http://localhost:5000";
+const API = "https://pp-deploy.onrender.com";
 
 const AdminDashboard = ({ user, onLogout }) => {
   const [users, setUsers] = useState([]);

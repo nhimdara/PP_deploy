@@ -17,7 +17,7 @@ import {
 import lessonBanner from "./../assets/image/lessonpage.jpeg";
 
 // ─── API ─────────────────────────────────────────────────────
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "https://pp-deploy.onrender.com/api";
 
 async function fetchLessons() {
   const res = await fetch(`${API_BASE}/lessons`);
