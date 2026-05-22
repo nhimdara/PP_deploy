@@ -67,7 +67,7 @@ app.post("/api/chat", async (req, res) => {
 // ── REGISTER ──────────────────────────────────────────────────
 // POST /api/register
 // Body: { name, email, password }
-app.post("/api/register", async (req, res) => {
+app.post("/api/users", async (req, res) => {
   const { name, email, password } = req.body;
 
   if (!name || name.trim().length < 2) {
@@ -115,7 +115,7 @@ app.post("/api/register", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("❌ /api/register error:", err.message);
+    console.error("❌ /api/users error:", err.message);
     res.status(500).json({ error: "Registration failed. Please try again." });
   }
 });
@@ -123,7 +123,7 @@ app.post("/api/register", async (req, res) => {
 // ── LOGIN ─────────────────────────────────────────────────────
 // POST /api/login
 // Body: { email, password }
-app.post("/api/login", async (req, res) => {
+app.post("/api/users", async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -160,7 +160,7 @@ app.post("/api/login", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("❌ /api/login error:", err.message);
+    console.error("❌ /api/users error:", err.message);
     res.status(500).json({ error: "Login failed. Please try again." });
   }
 });
