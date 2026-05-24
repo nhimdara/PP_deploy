@@ -101,7 +101,7 @@ app.post("/api/register", async (req, res) => {
 
     const password_hash = await bcrypt.hash(password, 10);
     const [result] = await db.query(
-      "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'client')",
+      "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'student')",
       [name.trim(), normalizedEmail, password_hash],
     );
 
@@ -111,7 +111,7 @@ app.post("/api/register", async (req, res) => {
         id: result.insertId,
         name: name.trim(),
         email: normalizedEmail,
-        role: "client",
+        role: "student",
       },
     });
   } catch (err) {

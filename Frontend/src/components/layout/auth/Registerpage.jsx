@@ -85,7 +85,7 @@ const RegisterPage = ({ onAuthSuccess }) => {
 
     try {
       // ── 1. Save to MySQL via backend API ──
-      const response = await fetch("https://pp-deploy.onrender.com/api/users", {
+      const response = await fetch("https://pp-deploy.onrender.com/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -257,7 +257,7 @@ const RegisterPage = ({ onAuthSuccess }) => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes fadeScale {
           from {
             opacity: 0;
