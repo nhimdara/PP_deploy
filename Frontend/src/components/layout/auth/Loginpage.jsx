@@ -4,6 +4,593 @@ import logo from "../../assets/image/logo.png";
 import banner from "../../assets/image/banner.jpg";
 import { loginMiddleware } from "../../../auth/authMiddleware";
 
+/* ─────────────────────────────────────────────
+   Forgot-password steps:
+   "email"  → enter email
+   "otp"    → enter 6-digit code
+   "reset"  → enter new password
+   "done"   → success
+───────────────────────────────────────────── */
+
+const ForgotPasswordModal = ({ onClose }) => {
+  const [step, setStep] = useState("email"); // email | otp | reset | done
+  const [fpEmail, setFpEmail] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [fpError, setFpError] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  // OTP refs for auto-focus
+  const otpRefs = Array.from({ length: 6 }, () => React.useRef(null));
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [countdown]);
+
+  const handleSendOtp = async () => {
+    if (!fpEmail.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      setFpError("Enter a valid email address");
+      return;
+    }
+    setFpError("");
+    setIsSending(true);
+    await new Promise((r) => setTimeout(r, 1000));
+    setIsSending(false);
+    setStep("otp");
+    setCountdown(60);
+  };
+
+  const handleOtpChange = (idx, val) => {
+    if (!/^\d?$/.test(val)) return;
+    const next = [...otp];
+    next[idx] = val;
+    setOtp(next);
+    if (val && idx < 5) otpRefs[idx + 1].current?.focus();
+  };
+
+  const handleOtpKeyDown = (idx, e) => {
+    if (e.key === "Backspace" && !otp[idx] && idx > 0) {
+      otpRefs[idx - 1].current?.focus();
+    }
+  };
+
+  const handleVerifyOtp = () => {
+    const code = otp.join("");
+    if (code.length < 6) {
+      setFpError("Enter the 6-digit code");
+      return;
+    }
+    // In production, verify against backend. Here we accept any 6 digits.
+    setFpError("");
+    setStep("reset");
+  };
+
+  const handleResend = async () => {
+    if (countdown > 0) return;
+    setIsSending(true);
+    await new Promise((r) => setTimeout(r, 800));
+    setIsSending(false);
+    setOtp(["", "", "", "", "", ""]);
+    setCountdown(60);
+  };
+
+  const handleResetPassword = () => {
+    if (newPw.length < 6) {
+      setFpError("Password must be at least 6 characters");
+      return;
+    }
+    if (newPw !== confirmPw) {
+      setFpError("Passwords do not match");
+      return;
+    }
+    // In production, call API to update password.
+    setFpError("");
+    setStep("done");
+  };
+
+  const cardBase = `
+    fixed inset-0 z-50 flex items-center justify-center p-4
+    bg-[#05090f]/80 backdrop-blur-md
+  `;
+
+  const panelBase = `
+    relative w-full max-w-md rounded-3xl overflow-hidden
+    animate-[fadeUp_0.45s_cubic-bezier(0.2,0.9,0.3,1.1)]
+  `;
+
+  const inputCls = `
+    w-full bg-white/5 border border-white/10 rounded-xl text-gray-200 text-sm
+    py-3.5 px-4 placeholder-gray-500 transition-all duration-300
+    focus:outline-none focus:border-cyan-400 focus:bg-cyan-500/10
+    focus:ring-2 focus:ring-cyan-500/30
+  `;
+
+  return (
+    <div
+      className={cardBase}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className={panelBase}
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(15,25,40,0.95) 0%, rgba(8,15,30,0.98) 100%)",
+          border: "1px solid rgba(56,189,248,0.2)",
+          boxShadow:
+            "0 30px 80px -20px rgba(0,0,0,0.9), 0 0 60px rgba(6,182,212,0.08)",
+        }}
+      >
+        {/* Glow orbs */}
+        <div className="absolute -top-16 -right-16 w-48 h-48 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 p-8">
+          {/* Close */}
+          <button
+            onClick={onClose}
+            className="absolute top-5 right-5 text-gray-500 hover:text-cyan-400 transition-colors duration-200"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path
+                d="M5 5L15 15M15 5L5 15"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+
+          {/* STEP: EMAIL */}
+          {step === "email" && (
+            <div className="space-y-6">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 border border-cyan-500/30 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <path
+                      d="M4 8L14 15L24 8M4 22H24V6H4V22Z"
+                      stroke="#67e8f9"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="text-center space-y-1">
+                <h3 className="text-2xl font-bold text-white tracking-tight">
+                  Forgot password?
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  We'll send a reset code to your email
+                </p>
+              </div>
+
+              {fpError && <ErrorBanner msg={fpError} />}
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Email address
+                </label>
+                <input
+                  className={inputCls}
+                  type="email"
+                  placeholder="dara@example.com"
+                  value={fpEmail}
+                  onChange={(e) => {
+                    setFpEmail(e.target.value);
+                    setFpError("");
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              <CyberButton
+                onClick={handleSendOtp}
+                loading={isSending}
+                label="Send reset code"
+                loadingLabel="Sending..."
+              />
+
+              <p className="text-center text-gray-500 text-xs">
+                Remember it?{" "}
+                <button
+                  onClick={onClose}
+                  className="text-cyan-400 font-semibold hover:underline"
+                >
+                  Back to sign in
+                </button>
+              </p>
+            </div>
+          )}
+
+          {/* STEP: OTP */}
+          {step === "otp" && (
+            <div className="space-y-6">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 border border-cyan-500/30 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <rect
+                      x="5"
+                      y="11"
+                      width="18"
+                      height="13"
+                      rx="2"
+                      stroke="#67e8f9"
+                      strokeWidth="1.4"
+                    />
+                    <path
+                      d="M9 11V8C9 5.8 10.8 4 13 4H15C17.2 4 19 5.8 19 8V11"
+                      stroke="#67e8f9"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                    />
+                    <circle cx="14" cy="17" r="1.5" fill="#67e8f9" />
+                  </svg>
+                </div>
+              </div>
+              <div className="text-center space-y-1">
+                <h3 className="text-2xl font-bold text-white tracking-tight">
+                  Check your email
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  We sent a 6-digit code to{" "}
+                  <span className="text-cyan-400 font-semibold">{fpEmail}</span>
+                </p>
+              </div>
+
+              {fpError && <ErrorBanner msg={fpError} />}
+
+              {/* OTP Boxes */}
+              <div className="flex gap-2 justify-center">
+                {otp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={otpRefs[i]}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    className="w-11 h-13 text-center text-xl font-bold bg-white/5 border border-white/10 rounded-xl text-white
+                      focus:outline-none focus:border-cyan-400 focus:bg-cyan-500/10 focus:ring-2 focus:ring-cyan-500/30
+                      transition-all duration-200 py-3"
+                    style={{ width: "2.75rem", height: "3.25rem" }}
+                  />
+                ))}
+              </div>
+
+              <CyberButton onClick={handleVerifyOtp} label="Verify code" />
+
+              {/* Resend */}
+              <p className="text-center text-gray-500 text-xs">
+                Didn't receive it?{" "}
+                <button
+                  onClick={handleResend}
+                  disabled={countdown > 0 || isSending}
+                  className={`font-semibold transition-colors ${countdown > 0 ? "text-gray-600 cursor-default" : "text-cyan-400 hover:underline"}`}
+                >
+                  {countdown > 0
+                    ? `Resend in ${countdown}s`
+                    : isSending
+                      ? "Sending..."
+                      : "Resend code"}
+                </button>
+              </p>
+
+              <p className="text-center text-gray-500 text-xs">
+                <button
+                  onClick={() => {
+                    setStep("email");
+                    setFpError("");
+                  }}
+                  className="text-cyan-400 font-semibold hover:underline"
+                >
+                  ← Change email
+                </button>
+              </p>
+            </div>
+          )}
+
+          {/* STEP: RESET */}
+          {step === "reset" && (
+            <div className="space-y-6">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500/20 to-indigo-500/20 border border-cyan-500/30 flex items-center justify-center">
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                    <path
+                      d="M14 4L18 10H10L14 4Z"
+                      fill="#67e8f9"
+                      fillOpacity="0.8"
+                    />
+                    <circle
+                      cx="14"
+                      cy="18"
+                      r="5"
+                      stroke="#67e8f9"
+                      strokeWidth="1.4"
+                    />
+                    <path
+                      d="M14 15V19M12 17H16"
+                      stroke="#67e8f9"
+                      strokeWidth="1.3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="text-center space-y-1">
+                <h3 className="text-2xl font-bold text-white tracking-tight">
+                  New password
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  Create a strong password for your account
+                </p>
+              </div>
+
+              {fpError && <ErrorBanner msg={fpError} />}
+
+              <div className="space-y-4">
+                <PasswordInput
+                  label="New password"
+                  placeholder="At least 6 characters"
+                  value={newPw}
+                  onChange={(v) => {
+                    setNewPw(v);
+                    setFpError("");
+                  }}
+                  show={showNewPw}
+                  onToggle={() => setShowNewPw((v) => !v)}
+                />
+                <PasswordInput
+                  label="Confirm password"
+                  placeholder="Repeat your password"
+                  value={confirmPw}
+                  onChange={(v) => {
+                    setConfirmPw(v);
+                    setFpError("");
+                  }}
+                  show={showConfirmPw}
+                  onToggle={() => setShowConfirmPw((v) => !v)}
+                />
+
+                {/* Strength bar */}
+                {newPw && <StrengthBar pw={newPw} />}
+              </div>
+
+              <CyberButton
+                onClick={handleResetPassword}
+                label="Reset password"
+              />
+            </div>
+          )}
+
+          {/* STEP: DONE */}
+          {step === "done" && (
+            <div className="space-y-6 text-center py-4">
+              <div className="flex justify-center">
+                <div className="relative w-20 h-20">
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full blur-xl opacity-50 animate-pulse" />
+                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500 to-indigo-500 flex items-center justify-center shadow-2xl">
+                    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                      <path
+                        d="M8 18L14 24L28 12"
+                        stroke="white"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-white tracking-tight">
+                  Password reset!
+                </h3>
+                <p className="text-gray-400 text-sm">
+                  Your password has been updated successfully. You can now sign
+                  in with your new password.
+                </p>
+              </div>
+              <CyberButton onClick={onClose} label="Back to sign in" />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── Helpers ── */
+
+const ErrorBanner = ({ msg }) => (
+  <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+    <svg
+      className="w-4 h-4 text-red-400 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+    <span className="text-red-300 text-sm">{msg}</span>
+  </div>
+);
+
+const CyberButton = ({ onClick, loading, label, loadingLabel }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={loading}
+    className="relative group w-full py-4 bg-gradient-to-r from-cyan-500 to-indigo-600 rounded-xl text-white font-bold
+      shadow-2xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all duration-300
+      transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden"
+  >
+    <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    <span className="relative flex items-center justify-center gap-2 text-base">
+      {loading ? (
+        <>
+          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+          {loadingLabel || "Loading..."}
+        </>
+      ) : (
+        <>
+          {label}
+          <svg
+            className="w-4 h-4 group-hover:translate-x-1 transition-transform"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 7l5 5m0 0l-5 5m5-5H6"
+            />
+          </svg>
+        </>
+      )}
+    </span>
+  </button>
+);
+
+const PasswordInput = ({
+  label,
+  placeholder,
+  value,
+  onChange,
+  show,
+  onToggle,
+}) => (
+  <div className="space-y-2">
+    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+      {label}
+    </label>
+    <div className="relative">
+      <input
+        type={show ? "text" : "password"}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-white/5 border border-white/10 rounded-xl text-gray-200 text-sm
+          py-3.5 pl-4 pr-12 placeholder-gray-500 transition-all duration-300
+          focus:outline-none focus:border-cyan-400 focus:bg-cyan-500/10 focus:ring-2 focus:ring-cyan-500/30"
+      />
+      <button
+        type="button"
+        onClick={onToggle}
+        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-cyan-400 transition-colors"
+      >
+        {show ? (
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path
+              d="M1 9C1 9 3 5 9 5C15 5 17 9 17 9C17 9 15 13 9 13C3 13 1 9 1 9Z"
+              stroke="currentColor"
+              strokeWidth="1.2"
+            />
+            <circle
+              cx="9"
+              cy="9"
+              r="2.5"
+              stroke="currentColor"
+              strokeWidth="1.2"
+            />
+            <path
+              d="M14 4L4 14"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+          </svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path
+              d="M1 9C1 9 3 5 9 5C15 5 17 9 17 9C17 9 15 13 9 13C3 13 1 9 1 9Z"
+              stroke="currentColor"
+              strokeWidth="1.2"
+            />
+            <circle
+              cx="9"
+              cy="9"
+              r="2.5"
+              stroke="currentColor"
+              strokeWidth="1.2"
+            />
+          </svg>
+        )}
+      </button>
+    </div>
+  </div>
+);
+
+const StrengthBar = ({ pw }) => {
+  const score = [
+    pw.length >= 8,
+    /[A-Z]/.test(pw),
+    /[0-9]/.test(pw),
+    /[^A-Za-z0-9]/.test(pw),
+  ].filter(Boolean).length;
+  const labels = ["", "Weak", "Fair", "Good", "Strong"];
+  const colors = [
+    "",
+    "bg-red-500",
+    "bg-yellow-500",
+    "bg-blue-400",
+    "bg-cyan-400",
+  ];
+  return (
+    <div className="space-y-1.5">
+      <div className="flex gap-1">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= score ? colors[score] : "bg-white/10"}`}
+          />
+        ))}
+      </div>
+      {score > 0 && (
+        <p
+          className={`text-xs font-semibold ${["", "text-red-400", "text-yellow-400", "text-blue-400", "text-cyan-400"][score]}`}
+        >
+          {labels[score]} password
+        </p>
+      )}
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────
+   Main Login Page
+───────────────────────────────────────────── */
+
 const LoginPage = ({ onAuthSuccess }) => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -16,6 +603,7 @@ const LoginPage = ({ onAuthSuccess }) => {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [showForgot, setShowForgot] = useState(false);
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("remembered_email");
@@ -23,10 +611,8 @@ const LoginPage = ({ onAuthSuccess }) => {
       setEmail(savedEmail);
       setRememberMe(true);
     }
-
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e) =>
       setMousePosition({ x: e.clientX, y: e.clientY });
-    };
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
@@ -43,29 +629,21 @@ const LoginPage = ({ onAuthSuccess }) => {
     ev.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) return setErrors(errs);
-
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 800));
-
-    // ── Remember me ──
     if (rememberMe) {
       localStorage.setItem("remembered_email", email);
     } else {
       localStorage.removeItem("remembered_email");
     }
-
-    // ── Auth middleware: checks admin + all registered clients ──
     const result = loginMiddleware(email.trim(), password);
-
     setIsLoading(false);
-
     if (!result.success) {
       setErrors({ general: result.error });
       setShake(true);
       setTimeout(() => setShake(false), 600);
       return;
     }
-
     if (onAuthSuccess) onAuthSuccess(result);
   };
 
@@ -75,6 +653,11 @@ const LoginPage = ({ onAuthSuccess }) => {
 
   return (
     <div className="min-h-screen bg-[#05090f] font-sans relative overflow-hidden">
+      {/* Forgot Password Modal */}
+      {showForgot && (
+        <ForgotPasswordModal onClose={() => setShowForgot(false)} />
+      )}
+
       {/* Interactive Cursor Glow */}
       <div
         className="fixed pointer-events-none z-30 w-96 h-96 rounded-full bg-cyan-500/10 blur-3xl transition-transform duration-300 ease-out"
@@ -83,12 +666,12 @@ const LoginPage = ({ onAuthSuccess }) => {
         }}
       />
 
-      {/* Original Background with Banner */}
+      {/* Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute w-[700px] h-[700px] rounded-full top-[-200px] left-[-200px] bg-cyan-500/20 blur-3xl" />
         <img
           src={banner}
-          alt="Background Banner"
+          alt=""
           className="absolute top-0 left-0 w-full h-full object-cover opacity-20 blur-lg"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#05090f]/50 via-transparent to-[#05090f]/80" />
@@ -99,7 +682,6 @@ const LoginPage = ({ onAuthSuccess }) => {
       <div className="relative z-10 flex flex-col lg:flex-row min-h-screen">
         {/* LEFT HERO PANEL */}
         <div className="w-full lg:w-1/2 xl:w-[45%] flex flex-col justify-center px-8 sm:px-12 lg:px-16 py-12 lg:py-16 border-r border-cyan-500/10 bg-gradient-to-r from-[#05090f]/50 to-transparent">
-          {/* Logo */}
           <div className="flex items-center gap-3 mb-16 lg:mb-20 group cursor-pointer">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-2xl blur-lg opacity-60" />
@@ -117,7 +699,6 @@ const LoginPage = ({ onAuthSuccess }) => {
           </div>
 
           <div className="space-y-6">
-            {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-cyan-500/10 border border-cyan-400/30 backdrop-blur-sm">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
@@ -141,7 +722,6 @@ const LoginPage = ({ onAuthSuccess }) => {
               certificates are waiting.
             </p>
 
-            {/* Info Card */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <div className="relative flex gap-4 items-start bg-gradient-to-r from-cyan-500/5 to-indigo-500/5 border border-cyan-500/20 rounded-xl p-5 backdrop-blur-sm">
@@ -185,11 +765,9 @@ const LoginPage = ({ onAuthSuccess }) => {
           <div
             className={`w-full max-w-md relative ${shake ? "animate-[shake_0.5s_ease-in-out]" : ""}`}
           >
-            {/* Animated Orbs */}
             <div className="absolute -top-20 -right-20 w-64 h-64 bg-gradient-to-r from-cyan-500/20 to-indigo-500/20 rounded-full blur-3xl animate-pulse" />
             <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full blur-3xl animate-pulse" />
 
-            {/* Main Card */}
             <div
               className="relative rounded-3xl p-8 transition-all duration-500 animate-[fadeUp_0.6s_cubic-bezier(0.2,0.9,0.3,1.1)] overflow-hidden"
               style={{
@@ -201,7 +779,7 @@ const LoginPage = ({ onAuthSuccess }) => {
               }}
             >
               <div className="relative z-10">
-                {/* Avatar with Glow */}
+                {/* Avatar */}
                 <div className="flex justify-center mb-8">
                   <div className="relative group">
                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -237,7 +815,6 @@ const LoginPage = ({ onAuthSuccess }) => {
                   Enter your credentials to continue
                 </p>
 
-                {/* Error Alert */}
                 {errors.general && (
                   <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-6 animate-[shake_0.5s_ease-in-out]">
                     <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
@@ -266,7 +843,7 @@ const LoginPage = ({ onAuthSuccess }) => {
                   noValidate
                   className="flex flex-col gap-5"
                 >
-                  {/* Email Field */}
+                  {/* Email */}
                   <div className="relative group">
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
                       Email address
@@ -324,18 +901,20 @@ const LoginPage = ({ onAuthSuccess }) => {
                     )}
                   </div>
 
-                  {/* Password Field */}
+                  {/* Password */}
                   <div className="relative group">
                     <div className="flex justify-between items-center mb-2">
                       <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                         Password
                       </label>
-                      <a
-                        href="#"
+                      {/* ← Forgot password link now opens the modal */}
+                      <button
+                        type="button"
+                        onClick={() => setShowForgot(true)}
                         className="text-xs text-cyan-400 font-semibold hover:text-cyan-300 transition-all hover:underline"
                       >
                         Forgot password?
-                      </a>
+                      </button>
                     </div>
                     <div className="relative">
                       <div
@@ -490,7 +1069,7 @@ const LoginPage = ({ onAuthSuccess }) => {
                     </label>
                   </div>
 
-                  {/* Submit Button */}
+                  {/* Submit */}
                   <button
                     type="submit"
                     disabled={isLoading}
@@ -513,12 +1092,12 @@ const LoginPage = ({ onAuthSuccess }) => {
                               r="10"
                               stroke="currentColor"
                               strokeWidth="4"
-                            ></circle>
+                            />
                             <path
                               className="opacity-75"
                               fill="currentColor"
                               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
+                            />
                           </svg>
                           Signing in...
                         </>
@@ -556,7 +1135,7 @@ const LoginPage = ({ onAuthSuccess }) => {
                   </div>
                 </div>
 
-                {/* Social Buttons */}
+                {/* Social */}
                 <div className="grid grid-cols-2 gap-3 mb-6">
                   <button className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-cyan-500/30 transition-all group">
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -587,7 +1166,6 @@ const LoginPage = ({ onAuthSuccess }) => {
                   </button>
                 </div>
 
-                {/* Register Link */}
                 <p className="text-center text-gray-500 text-sm">
                   New to ELearning?{" "}
                   <Link
@@ -618,37 +1196,18 @@ const LoginPage = ({ onAuthSuccess }) => {
 
       <style>{`
         @keyframes fadeUp {
-          from {
-            opacity: 0;
-            transform: translateY(40px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(40px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        
         @keyframes shake {
-          0%, 100% {
-            transform: translateX(0);
-          }
-          10%, 30%, 50%, 70%, 90% {
-            transform: translateX(-3px);
-          }
-          20%, 40%, 60%, 80% {
-            transform: translateX(3px);
-          }
+          0%,100% { transform: translateX(0); }
+          10%,30%,50%,70%,90% { transform: translateX(-3px); }
+          20%,40%,60%,80%     { transform: translateX(3px); }
         }
-        
         @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
+          to { transform: rotate(360deg); }
         }
-        
-        .animate-spin {
-          animation: spin 0.7s linear infinite;
-        }
+        .animate-spin { animation: spin 0.7s linear infinite; }
       `}</style>
     </div>
   );
