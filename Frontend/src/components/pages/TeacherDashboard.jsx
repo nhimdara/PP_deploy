@@ -1,4 +1,4 @@
-// TeacherDashboard.jsx — FULLY FIXED with cascading dropdowns, working logout, and responsive design
+// TeacherDashboard.jsx — with Year/Semester filter pills in By Lesson & Lessons tabs
 import React, { useState, useEffect, useCallback } from "react";
 import logo from "./../assets/image/logo.png";
 
@@ -17,7 +17,6 @@ import {
   AlertCircle,
   X,
   LogOut,
-  GraduationCap,
   Search,
   Play,
   Clock,
@@ -55,7 +54,7 @@ function getYouTubeEmbedUrl(videoId) {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  FETCH LESSONS FROM API
+//  API HELPERS
 // ─────────────────────────────────────────────────────────────
 async function fetchLessonsFromAPI() {
   const res = await fetch(`${API_BASE}/lessons`);
@@ -96,9 +95,7 @@ async function updateVideoAPI(id, videoData) {
 }
 
 async function deleteVideoAPI(id) {
-  const res = await fetch(`${API_BASE}/videos/${id}`, {
-    method: "DELETE",
-  });
+  const res = await fetch(`${API_BASE}/videos/${id}`, { method: "DELETE" });
   if (!res.ok) {
     const error = await res.json();
     throw new Error(error.error || "Failed to delete video");
@@ -107,7 +104,7 @@ async function deleteVideoAPI(id) {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  NOTIFICATION COMPONENT
+//  TOAST
 // ─────────────────────────────────────────────────────────────
 const Toast = ({ toast, onDismiss }) => {
   useEffect(() => {
@@ -162,6 +159,104 @@ const Toast = ({ toast, onDismiss }) => {
 };
 
 // ─────────────────────────────────────────────────────────────
+//  FILTER BAR COMPONENT
+// ─────────────────────────────────────────────────────────────
+const FilterBar = ({
+  years,
+  semesters,
+  selectedYear,
+  selectedSemester,
+  onYearChange,
+  onSemesterChange,
+}) => {
+  const pillStyle = (active) => ({
+    padding: "5px 14px",
+    borderRadius: "20px",
+    border: `1px solid ${active ? "#c7d2fe" : "#e5e7eb"}`,
+    background: active ? "#eef2ff" : "#fff",
+    color: active ? "#4f46e5" : "#6b7280",
+    fontSize: "13px",
+    fontWeight: active ? 600 : 400,
+    cursor: "pointer",
+    fontFamily: "'DM Sans', sans-serif",
+    transition: "all 0.15s",
+    whiteSpace: "nowrap",
+  });
+
+  const labelStyle = {
+    fontSize: "11px",
+    fontWeight: 600,
+    color: "#9ca3af",
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    margin: "0 0 8px",
+  };
+
+  const semesterOptions =
+    semesters.length > 0
+      ? semesters
+      : [
+          { id: "1", name: "1" },
+          { id: "2", name: "2" },
+        ];
+
+  return (
+    <div
+      style={{
+        background: "#fff",
+        border: "1px solid #e5e7eb",
+        borderRadius: "14px",
+        padding: "16px 20px",
+        marginBottom: 20,
+      }}
+    >
+      {/* Year */}
+      <p style={labelStyle}>Year</p>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <button
+          onClick={() => onYearChange("")}
+          style={pillStyle(selectedYear === "")}
+        >
+          All years
+        </button>
+        {years.map((y) => (
+          <button
+            key={y.id}
+            onClick={() => onYearChange(String(y.id))}
+            style={pillStyle(selectedYear === String(y.id))}
+          >
+            Year {y.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Divider */}
+      <div style={{ height: 1, background: "#f3f4f6", margin: "12px 0" }} />
+
+      {/* Semester */}
+      <p style={labelStyle}>Semester</p>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <button
+          onClick={() => onSemesterChange("")}
+          style={pillStyle(selectedSemester === "")}
+        >
+          All semesters
+        </button>
+        {semesterOptions.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => onSemesterChange(String(s.id))}
+            style={pillStyle(selectedSemester === String(s.id))}
+          >
+            Semester {s.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
 //  VIDEO CARD
 // ─────────────────────────────────────────────────────────────
 const VideoCard = ({ video, lesson, onEdit, onDelete }) => {
@@ -176,7 +271,6 @@ const VideoCard = ({ video, lesson, onEdit, onDelete }) => {
         borderRadius: "14px",
         overflow: "hidden",
         transition: "box-shadow 0.2s, transform 0.2s",
-        cursor: "default",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.boxShadow = "0 8px 24px rgba(99,102,241,0.12)";
@@ -250,7 +344,6 @@ const VideoCard = ({ video, lesson, onEdit, onDelete }) => {
             fontSize: "11px",
             fontWeight: 600,
             padding: "2px 8px",
-            letterSpacing: "0.02em",
           }}
         >
           {video.is_free ? "FREE" : "PAID"}
@@ -286,7 +379,6 @@ const VideoCard = ({ video, lesson, onEdit, onDelete }) => {
         >
           {video.title}
         </p>
-
         {lesson && (
           <p
             style={{
@@ -299,11 +391,9 @@ const VideoCard = ({ video, lesson, onEdit, onDelete }) => {
               gap: 4,
             }}
           >
-            <BookOpen size={11} />
-            {lesson.title}
+            <BookOpen size={11} /> {lesson.title}
           </p>
         )}
-
         {video.description && (
           <p
             style={{
@@ -319,7 +409,6 @@ const VideoCard = ({ video, lesson, onEdit, onDelete }) => {
             {video.description}
           </p>
         )}
-
         <div
           style={{
             display: "flex",
@@ -446,8 +535,7 @@ const VideoFormModal = ({ isOpen, onClose, onSave, editingVideo, lessons }) => {
         is_free: editingVideo.is_free === 1 || editingVideo.is_free === true,
         order_index: editingVideo.order_index,
       });
-      const id = extractYouTubeId(editingVideo.link);
-      setPreview(id);
+      setPreview(extractYouTubeId(editingVideo.link));
     } else {
       setForm({
         lesson_id: "",
@@ -466,11 +554,7 @@ const VideoFormModal = ({ isOpen, onClose, onSave, editingVideo, lessons }) => {
   const handleChange = (field, value) => {
     setForm((p) => ({ ...p, [field]: value }));
     if (errors[field]) setErrors((p) => ({ ...p, [field]: null }));
-
-    if (field === "link") {
-      const id = extractYouTubeId(value);
-      setPreview(id || null);
-    }
+    if (field === "link") setPreview(extractYouTubeId(value) || null);
   };
 
   const validate = () => {
@@ -487,12 +571,10 @@ const VideoFormModal = ({ isOpen, onClose, onSave, editingVideo, lessons }) => {
     if (
       form.duration_minutes &&
       (isNaN(form.duration_minutes) || +form.duration_minutes < 1)
-    ) {
+    )
       e.duration_minutes = "Duration must be a positive number";
-    }
-    if (!form.order_index || isNaN(form.order_index) || +form.order_index < 1) {
+    if (!form.order_index || isNaN(form.order_index) || +form.order_index < 1)
       e.order_index = "Order must be a positive number";
-    }
     return e;
   };
 
@@ -976,7 +1058,6 @@ const VideoFormModal = ({ isOpen, onClose, onSave, editingVideo, lessons }) => {
                 display: "flex",
                 alignItems: "center",
                 gap: 7,
-                transition: "opacity 0.2s",
               }}
             >
               {isSaving ? (
@@ -1002,7 +1083,7 @@ const VideoFormModal = ({ isOpen, onClose, onSave, editingVideo, lessons }) => {
 };
 
 // ─────────────────────────────────────────────────────────────
-//  MAIN TEACHER DASHBOARD - WITH CASCADING DROPDOWNS INTEGRATED
+//  MAIN DASHBOARD
 // ─────────────────────────────────────────────────────────────
 const TeacherDashboard = ({ user, onLogout }) => {
   const [videos, setVideos] = useState([]);
@@ -1018,7 +1099,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // ========== CASCADING DROPDOWN STATES ==========
+  // Cascading filter state
   const [years, setYears] = useState([]);
   const [semesters, setSemesters] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -1026,11 +1107,8 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const [selectedSemester, setSelectedSemester] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
 
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-  };
+  const showToast = (message, type = "success") => setToast({ message, type });
 
-  // Load initial data
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -1041,14 +1119,13 @@ const TeacherDashboard = ({ user, onLogout }) => {
       setVideos(videosData);
       setLessons(lessonsData);
     } catch (err) {
-      console.error("Failed to load data:", err);
       showToast(err.message, "error");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // ========== 1. Fetch Years on mount ==========
+  // Fetch years on mount
   useEffect(() => {
     fetch(`${API_BASE}/years`)
       .then((res) => res.json())
@@ -1056,7 +1133,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
       .catch((err) => console.error("Failed to fetch years:", err));
   }, []);
 
-  // ========== 2. Fetch Semesters when Year changes ==========
+  // Fetch semesters when year changes
   useEffect(() => {
     if (selectedYear) {
       fetch(`${API_BASE}/semesters?year_id=${selectedYear}`)
@@ -1072,36 +1149,25 @@ const TeacherDashboard = ({ user, onLogout }) => {
     }
   }, [selectedYear]);
 
-  // ========== 3. Fetch Subjects when Year or Semester changes ==========
+  // Fetch subjects when year or semester changes
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        let url = `${API_BASE}/lessons/filter`;
         const params = new URLSearchParams();
         if (selectedYear) params.append("year_id", selectedYear);
         if (selectedSemester) params.append("semester_id", selectedSemester);
-
-        if (params.toString()) {
-          url += `?${params.toString()}`;
-        }
-
+        const url = params.toString()
+          ? `${API_BASE}/lessons/filter?${params}`
+          : `${API_BASE}/lessons/filter`;
         const res = await fetch(url);
-        if (res.ok) {
-          const data = await res.json();
-          setSubjects(data);
-        } else {
-          setSubjects([]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch subjects:", err);
+        setSubjects(res.ok ? await res.json() : []);
+      } catch {
         setSubjects([]);
       }
       setSelectedSubject("");
     };
-
-    if (selectedYear) {
-      fetchSubjects();
-    } else {
+    if (selectedYear) fetchSubjects();
+    else {
       setSubjects([]);
       setSelectedSubject("");
     }
@@ -1110,6 +1176,26 @@ const TeacherDashboard = ({ user, onLogout }) => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleYearChange = (val) => {
+    setSelectedYear(val);
+    // If clearing year, also clear semester
+    if (!val) setSelectedSemester("");
+  };
+
+  const handleSemesterChange = (val) => {
+    setSelectedSemester(val);
+  };
+
+  // Filtered lessons based on cascading selection
+  const getFilteredLessons = () => {
+    if (selectedSubject)
+      return lessons.filter((l) => String(l.id) === String(selectedSubject));
+    if ((selectedYear || selectedSemester) && subjects.length > 0)
+      return subjects;
+    return lessons;
+  };
+  const filteredLessons = getFilteredLessons();
 
   // Stats
   const stats = {
@@ -1120,7 +1206,6 @@ const TeacherDashboard = ({ user, onLogout }) => {
     totalMinutes: videos.reduce((sum, v) => sum + (v.duration_minutes || 0), 0),
   };
 
-  // Filtered videos
   const filteredVideos = videos.filter((v) => {
     const matchLesson =
       filterLesson === "all" || String(v.lesson_id) === String(filterLesson);
@@ -1131,32 +1216,6 @@ const TeacherDashboard = ({ user, onLogout }) => {
     return matchLesson && matchSearch;
   });
 
-  // Filter lessons based on selected filters
-  const getFilteredLessons = () => {
-    let result = lessons;
-
-    if (selectedSubject) {
-      result = result.filter(
-        (lesson) => String(lesson.id) === String(selectedSubject),
-      );
-    } else if (subjects.length > 0 && (selectedYear || selectedSemester)) {
-      result = subjects;
-    }
-
-    if (
-      !selectedSubject &&
-      (selectedYear || selectedSemester) &&
-      subjects.length > 0
-    ) {
-      result = subjects;
-    }
-
-    return result;
-  };
-
-  const filteredLessons = getFilteredLessons();
-
-  // Videos grouped by lesson
   const videosByLesson = filteredLessons
     .map((lesson) => ({
       lesson,
@@ -1166,7 +1225,6 @@ const TeacherDashboard = ({ user, onLogout }) => {
     }))
     .filter((g) => g.videos.length > 0);
 
-  // Save handler
   const handleSave = useCallback(
     async (formData) => {
       try {
@@ -1187,7 +1245,6 @@ const TeacherDashboard = ({ user, onLogout }) => {
     [loadData],
   );
 
-  // Delete handler
   const handleDelete = useCallback(
     async (videoId) => {
       try {
@@ -1208,19 +1265,14 @@ const TeacherDashboard = ({ user, onLogout }) => {
     setIsFormOpen(true);
     setMobileMenuOpen(false);
   };
-
   const openEdit = (video) => {
     setEditingVideo(video);
     setIsFormOpen(true);
   };
-
   const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
-    }
+    if (onLogout) onLogout();
   };
 
-  // Sidebar nav
   const navItems = [
     { id: "overview", icon: LayoutDashboard, label: "Overview" },
     { id: "videos", icon: Video, label: "All Videos" },
@@ -1228,115 +1280,115 @@ const TeacherDashboard = ({ user, onLogout }) => {
     { id: "lessons", icon: BookOpen, label: "Lessons" },
   ];
 
-  const sidebarStyle = {
-    width: 260,
-    minHeight: "100vh",
-    background: "#0f172a",
-    display: "flex",
-    flexDirection: "column",
-    flexShrink: 0,
-    fontFamily: "'DM Sans', sans-serif",
-    position: "sticky",
-    top: 0,
-    zIndex: 10,
-  };
-
-  const mainStyle = {
-    flex: 1,
-    background: "#f8fafc",
-    minHeight: "100vh",
-    fontFamily: "'DM Sans', sans-serif",
-    overflow: "auto",
-    width: "100%",
-  };
-
-  const mobileMenuButtonStyle = {
-    display: "none",
-    position: "fixed",
-    top: "16px",
-    left: "16px",
-    zIndex: 20,
-    background: "#0f172a",
-    border: "none",
-    borderRadius: "8px",
-    padding: "8px",
-    cursor: "pointer",
+  const addBtnStyle = {
+    padding: "10px 20px",
+    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
     color: "#fff",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-  };
-
-  const mobileOverlayStyle = {
-    display: "none",
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.5)",
-    zIndex: 15,
+    border: "none",
+    borderRadius: "10px",
+    fontSize: "13.5px",
+    fontWeight: 600,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: 7,
+    fontFamily: "'DM Sans', sans-serif",
   };
 
   if (loading) {
     return (
       <div style={{ display: "flex", minHeight: "100vh" }}>
-        <aside style={sidebarStyle} />
-        <main style={mainStyle}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100vh",
-            }}
-          >
-            <RefreshCw
-              size={32}
-              style={{ animation: "spin 1s linear infinite" }}
-            />
-          </div>
+        <aside
+          style={{
+            width: 260,
+            minHeight: "100vh",
+            background: "#0f172a",
+            flexShrink: 0,
+          }}
+        />
+        <main
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <RefreshCw
+            size={32}
+            style={{ animation: "spin 1s linear infinite" }}
+          />
         </main>
       </div>
     );
   }
 
+  const isMobile = window.innerWidth <= 768;
+
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Mobile menu button */}
       <button
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        style={mobileMenuButtonStyle}
         className="mobile-menu-button"
+        style={{
+          display: "none",
+          position: "fixed",
+          top: "16px",
+          left: "16px",
+          zIndex: 20,
+          background: "#0f172a",
+          border: "none",
+          borderRadius: "8px",
+          padding: "8px",
+          cursor: "pointer",
+          color: "#fff",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        }}
       >
         <Menu size={20} />
       </button>
 
-      {/* Mobile Overlay */}
-      <div
-        onClick={() => setMobileMenuOpen(false)}
-        style={{
-          ...mobileOverlayStyle,
-          display: mobileMenuOpen ? "block" : "none",
-        }}
-        className="mobile-overlay"
-      />
+      {/* Mobile overlay */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 15,
+          }}
+        />
+      )}
 
       <div
         style={{ display: "flex", minHeight: "100vh", position: "relative" }}
       >
-        {/* SIDEBAR */}
+        {/* ── SIDEBAR ── */}
         <aside
+          className="sidebar"
           style={{
-            ...sidebarStyle,
-            transform:
-              window.innerWidth <= 768 && !mobileMenuOpen
-                ? "translateX(-100%)"
-                : "translateX(0)",
-            transition: "transform 0.3s ease",
-            position: window.innerWidth <= 768 ? "fixed" : "sticky",
+            width: 260,
+            minHeight: "100vh",
+            background: "#0f172a",
+            display: "flex",
+            flexDirection: "column",
+            flexShrink: 0,
+            fontFamily: "'DM Sans', sans-serif",
+            position: isMobile ? "fixed" : "sticky",
             top: 0,
             left: 0,
             height: "100vh",
             overflowY: "auto",
             zIndex: 16,
+            transform:
+              isMobile && !mobileMenuOpen
+                ? "translateX(-100%)"
+                : "translateX(0)",
+            transition: "transform 0.3s ease",
+            boxShadow: isMobile ? "2px 0 8px rgba(0,0,0,0.1)" : "none",
           }}
-          className="sidebar"
         >
           <div
             style={{
@@ -1346,11 +1398,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 shrink-0">
-                <img
-                  src={logo}
-                  alt="LearnFlow Logo"
-                  className="w-full h-full"
-                />
+                <img src={logo} alt="Logo" className="w-full h-full" />
               </div>
               <div>
                 <p
@@ -1436,8 +1484,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
                 marginBottom: 8,
               }}
             >
-              <Plus size={15} />
-              Add Video
+              <Plus size={15} /> Add Video
             </button>
           </div>
 
@@ -1515,9 +1562,18 @@ const TeacherDashboard = ({ user, onLogout }) => {
           </div>
         </aside>
 
-        {/* MAIN CONTENT */}
-        <main style={mainStyle}>
-          {/* OVERVIEW TAB */}
+        {/* ── MAIN CONTENT ── */}
+        <main
+          style={{
+            flex: 1,
+            background: "#f8fafc",
+            minHeight: "100vh",
+            fontFamily: "'DM Sans', sans-serif",
+            overflow: "auto",
+            width: "100%",
+          }}
+        >
+          {/* ══ OVERVIEW TAB ══ */}
           {activeTab === "overview" && (
             <div style={{ padding: "24px 20px" }}>
               <div style={{ marginBottom: 28 }}>
@@ -1542,7 +1598,6 @@ const TeacherDashboard = ({ user, onLogout }) => {
                 </p>
               </div>
 
-              {/* Stats grid */}
               <div
                 style={{
                   display: "grid",
@@ -1630,7 +1685,6 @@ const TeacherDashboard = ({ user, onLogout }) => {
                 ))}
               </div>
 
-              {/* Recent videos */}
               <div>
                 <div
                   style={{
@@ -1702,20 +1756,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
                     </p>
                     <button
                       onClick={openAdd}
-                      style={{
-                        padding: "10px 22px",
-                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "10px",
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 7,
-                        fontFamily: "'DM Sans', sans-serif",
-                      }}
+                      style={{ ...addBtnStyle, margin: "0 auto" }}
                     >
                       <Plus size={15} /> Add First Video
                     </button>
@@ -1749,7 +1790,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
-          {/* ALL VIDEOS TAB */}
+          {/* ══ ALL VIDEOS TAB ══ */}
           {activeTab === "videos" && (
             <div style={{ padding: "24px 20px" }}>
               <div
@@ -1784,28 +1825,11 @@ const TeacherDashboard = ({ user, onLogout }) => {
                     {filteredVideos.length !== 1 ? "s" : ""}
                   </p>
                 </div>
-                <button
-                  onClick={openAdd}
-                  style={{
-                    padding: "10px 20px",
-                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "10px",
-                    fontSize: "13.5px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 7,
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
-                >
+                <button onClick={openAdd} style={addBtnStyle}>
                   <Plus size={14} /> Add Video
                 </button>
               </div>
 
-              {/* Filters */}
               <div
                 style={{
                   display: "flex",
@@ -1861,7 +1885,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
                   }}
                 >
                   <option value="all">All lessons</option>
-                  {filteredLessons.map((l) => (
+                  {lessons.map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.title}
                     </option>
@@ -1908,7 +1932,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
-          {/* BY LESSON TAB */}
+          {/* ══ BY LESSON TAB ══ */}
           {activeTab === "by-lesson" && (
             <div style={{ padding: "24px 20px" }}>
               <div
@@ -1916,7 +1940,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  marginBottom: 24,
+                  marginBottom: 20,
                   flexWrap: "wrap",
                   gap: 12,
                 }}
@@ -1942,26 +1966,20 @@ const TeacherDashboard = ({ user, onLogout }) => {
                     Organized view of all lesson content
                   </p>
                 </div>
-                <button
-                  onClick={openAdd}
-                  style={{
-                    padding: "10px 20px",
-                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "10px",
-                    fontSize: "13.5px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 7,
-                    fontFamily: "'DM Sans', sans-serif",
-                  }}
-                >
+                <button onClick={openAdd} style={addBtnStyle}>
                   <Plus size={14} /> Add Video
                 </button>
               </div>
+
+              {/* ── FILTER BAR ── */}
+              <FilterBar
+                years={years}
+                semesters={semesters}
+                selectedYear={selectedYear}
+                selectedSemester={selectedSemester}
+                onYearChange={handleYearChange}
+                onSemesterChange={handleSemesterChange}
+              />
 
               {videosByLesson.length === 0 ? (
                 <div
@@ -1979,7 +1997,9 @@ const TeacherDashboard = ({ user, onLogout }) => {
                     style={{ marginBottom: 12 }}
                   />
                   <p style={{ color: "#9ca3af", fontSize: "14px" }}>
-                    No videos added yet. Add a video to a lesson to see it here.
+                    {selectedYear || selectedSemester
+                      ? "No videos found for the selected filters."
+                      : "No videos added yet. Add a video to a lesson to see it here."}
                   </p>
                 </div>
               ) : (
@@ -2084,7 +2104,6 @@ const TeacherDashboard = ({ user, onLogout }) => {
                           )}
                         </div>
                       </button>
-
                       {expandedLesson === lesson.id && (
                         <div style={{ padding: "16px 20px" }}>
                           <div
@@ -2114,167 +2133,218 @@ const TeacherDashboard = ({ user, onLogout }) => {
             </div>
           )}
 
-          {/* LESSONS TAB */}
+          {/* ══ LESSONS TAB ══ */}
           {activeTab === "lessons" && (
             <div style={{ padding: "24px 20px" }}>
-              <div style={{ marginBottom: 24 }}>
-                <h1
-                  style={{
-                    margin: 0,
-                    fontSize: "clamp(18px, 5vw, 22px)",
-                    fontWeight: 700,
-                    color: "#0f172a",
-                  }}
-                >
-                  Lessons
-                </h1>
-                <p
-                  style={{
-                    margin: "3px 0 0",
-                    color: "#64748b",
-                    fontSize: "13.5px",
-                  }}
-                >
-                  All available lessons — click a lesson to add a video
-                </p>
-              </div>
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                  gap: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 20,
+                  flexWrap: "wrap",
+                  gap: 12,
                 }}
               >
-                {filteredLessons.map((lesson) => {
-                  const count = videos.filter(
-                    (v) => String(v.lesson_id) === String(lesson.id),
-                  ).length;
-                  return (
-                    <div
-                      key={lesson.id}
-                      style={{
-                        background: "#fff",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "14px",
-                        padding: "18px 20px",
-                        position: "relative",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "4px",
-                          height: "100%",
-                          background: lesson.color || "#6366f1",
-                        }}
-                      />
-                      <div style={{ paddingLeft: 8 }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            justifyContent: "space-between",
-                            marginBottom: 10,
-                          }}
-                        >
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: "14px",
-                              fontWeight: 700,
-                              color: "#0f172a",
-                              lineHeight: 1.3,
-                              flex: 1,
-                            }}
-                          >
-                            {lesson.title}
-                          </p>
-                          <span
-                            style={{
-                              background: count > 0 ? "#eef2ff" : "#f9fafb",
-                              color: count > 0 ? "#6366f1" : "#9ca3af",
-                              border: `1px solid ${count > 0 ? "#c7d2fe" : "#e5e7eb"}`,
-                              borderRadius: "20px",
-                              padding: "2px 10px",
-                              fontSize: "11px",
-                              fontWeight: 600,
-                              flexShrink: 0,
-                              marginLeft: 8,
-                            }}
-                          >
-                            {count} video{count !== 1 ? "s" : ""}
-                          </span>
-                        </div>
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 6,
-                            flexWrap: "wrap",
-                            marginBottom: 14,
-                          }}
-                        >
-                          {[lesson.category, lesson.semester, lesson.level].map(
-                            (tag) =>
-                              tag && (
-                                <span
-                                  key={tag}
-                                  style={{
-                                    background: "#f3f4f6",
-                                    color: "#6b7280",
-                                    borderRadius: "5px",
-                                    padding: "2px 8px",
-                                    fontSize: "11px",
-                                    fontWeight: 500,
-                                  }}
-                                >
-                                  {tag}
-                                </span>
-                              ),
-                          )}
-                        </div>
-                        <button
-                          onClick={() => {
-                            openAdd();
-                          }}
-                          style={{
-                            width: "100%",
-                            padding: "8px",
-                            borderRadius: "9px",
-                            border: `1px dashed ${lesson.color || "#6366f1"}`,
-                            background: "transparent",
-                            color: lesson.color || "#6366f1",
-                            fontSize: "13px",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: 6,
-                            fontFamily: "'DM Sans', sans-serif",
-                            transition: "background 0.15s",
-                          }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.background = "#f5f3ff")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.background = "transparent")
-                          }
-                        >
-                          <Plus size={13} /> Add Video
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                <div>
+                  <h1
+                    style={{
+                      margin: 0,
+                      fontSize: "clamp(18px, 5vw, 22px)",
+                      fontWeight: 700,
+                      color: "#0f172a",
+                    }}
+                  >
+                    Lessons
+                  </h1>
+                  <p
+                    style={{
+                      margin: "3px 0 0",
+                      color: "#64748b",
+                      fontSize: "13.5px",
+                    }}
+                  >
+                    {filteredLessons.length} lesson
+                    {filteredLessons.length !== 1 ? "s" : ""} — click a lesson
+                    to add a video
+                  </p>
+                </div>
+                <button onClick={openAdd} style={addBtnStyle}>
+                  <Plus size={14} /> Add Video
+                </button>
               </div>
+
+              {/* ── FILTER BAR ── */}
+              <FilterBar
+                years={years}
+                semesters={semesters}
+                selectedYear={selectedYear}
+                selectedSemester={selectedSemester}
+                onYearChange={handleYearChange}
+                onSemesterChange={handleSemesterChange}
+              />
+
+              {filteredLessons.length === 0 ? (
+                <div
+                  style={{
+                    background: "#fff",
+                    border: "2px dashed #e5e7eb",
+                    borderRadius: "16px",
+                    padding: "48px 20px",
+                    textAlign: "center",
+                  }}
+                >
+                  <BookOpen
+                    size={40}
+                    color="#d1d5db"
+                    style={{ marginBottom: 12 }}
+                  />
+                  <p style={{ color: "#9ca3af", fontSize: "14px" }}>
+                    No lessons found for the selected filters.
+                  </p>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(280px, 1fr))",
+                    gap: 14,
+                  }}
+                >
+                  {filteredLessons.map((lesson) => {
+                    const count = videos.filter(
+                      (v) => String(v.lesson_id) === String(lesson.id),
+                    ).length;
+                    return (
+                      <div
+                        key={lesson.id}
+                        style={{
+                          background: "#fff",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "14px",
+                          padding: "18px 20px",
+                          position: "relative",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "4px",
+                            height: "100%",
+                            background: lesson.color || "#6366f1",
+                          }}
+                        />
+                        <div style={{ paddingLeft: 8 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              justifyContent: "space-between",
+                              marginBottom: 10,
+                            }}
+                          >
+                            <p
+                              style={{
+                                margin: 0,
+                                fontSize: "14px",
+                                fontWeight: 700,
+                                color: "#0f172a",
+                                lineHeight: 1.3,
+                                flex: 1,
+                              }}
+                            >
+                              {lesson.title}
+                            </p>
+                            <span
+                              style={{
+                                background: count > 0 ? "#eef2ff" : "#f9fafb",
+                                color: count > 0 ? "#6366f1" : "#9ca3af",
+                                border: `1px solid ${count > 0 ? "#c7d2fe" : "#e5e7eb"}`,
+                                borderRadius: "20px",
+                                padding: "2px 10px",
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                flexShrink: 0,
+                                marginLeft: 8,
+                              }}
+                            >
+                              {count} video{count !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 6,
+                              flexWrap: "wrap",
+                              marginBottom: 14,
+                            }}
+                          >
+                            {[
+                              lesson.category,
+                              lesson.semester,
+                              lesson.level,
+                            ].map(
+                              (tag) =>
+                                tag && (
+                                  <span
+                                    key={tag}
+                                    style={{
+                                      background: "#f3f4f6",
+                                      color: "#6b7280",
+                                      borderRadius: "5px",
+                                      padding: "2px 8px",
+                                      fontSize: "11px",
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    {tag}
+                                  </span>
+                                ),
+                            )}
+                          </div>
+                          <button
+                            onClick={openAdd}
+                            style={{
+                              width: "100%",
+                              padding: "8px",
+                              borderRadius: "9px",
+                              border: `1px dashed ${lesson.color || "#6366f1"}`,
+                              background: "transparent",
+                              color: lesson.color || "#6366f1",
+                              fontSize: "13px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 6,
+                              fontFamily: "'DM Sans', sans-serif",
+                              transition: "background 0.15s",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.background = "#f5f3ff")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.background = "transparent")
+                            }
+                          >
+                            <Plus size={13} /> Add Video
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </main>
 
-        {/* VIDEO FORM MODAL */}
+        {/* ── VIDEO FORM MODAL ── */}
         <VideoFormModal
           isOpen={isFormOpen}
           onClose={() => {
@@ -2286,7 +2356,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
           lessons={filteredLessons}
         />
 
-        {/* DELETE CONFIRM */}
+        {/* ── DELETE CONFIRM ── */}
         {deleteConfirm && (
           <div
             style={{
@@ -2388,7 +2458,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
           </div>
         )}
 
-        {/* TOAST */}
+        {/* ── TOAST ── */}
         {toast && <Toast toast={toast} onDismiss={() => setToast(null)} />}
       </div>
 
@@ -2396,14 +2466,8 @@ const TeacherDashboard = ({ user, onLogout }) => {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
         @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes spin { to { transform: rotate(360deg); } }
-        
         @media (max-width: 768px) {
-          .mobile-menu-button {
-            display: flex !important;
-          }
-          .sidebar {
-            box-shadow: 2px 0 8px rgba(0,0,0,0.1);
-          }
+          .mobile-menu-button { display: flex !important; }
         }
       `}</style>
     </>
